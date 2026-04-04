@@ -1,4 +1,4 @@
-package meteoproxy.domain.meteo;
+package meteoproxy.domain.meteo.model;
 
 import java.math.BigDecimal;
 

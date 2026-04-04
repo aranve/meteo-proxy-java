@@ -1,7 +1,10 @@
 package meteoproxy.domain.meteo;
 
-import meteoproxy.connector.openmeteo.GetForecastResponse;
+import meteoproxy.connector.openmeteo.dto.GetForecastResponse;
 import meteoproxy.connector.openmeteo.OpenMeteoConnector;
+import meteoproxy.domain.meteo.model.CurrentWeather;
+import meteoproxy.domain.meteo.model.Location;
+import meteoproxy.domain.meteo.model.Weather;
 import meteoproxy.domain.utils.DateTimeUtils;
 
 import java.math.BigDecimal;

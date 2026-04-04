@@ -3,6 +3,7 @@ package meteoproxy.connector.openmeteo;
 import meteoproxy.config.HttpConfig;
 import meteoproxy.config.JacksonConfig;
 import meteoproxy.config.RetryConfiguration;
+import meteoproxy.connector.openmeteo.dto.GetForecastResponse;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;

@@ -1,4 +1,4 @@
-package meteoproxy.connector.openmeteo;
+package meteoproxy.connector.openmeteo.dto;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 

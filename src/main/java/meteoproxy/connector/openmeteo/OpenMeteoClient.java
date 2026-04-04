@@ -1,5 +1,6 @@
 package meteoproxy.connector.openmeteo;
 
+import meteoproxy.connector.openmeteo.dto.GetForecastResponse;
 import retrofit2.Call;
 import retrofit2.http.GET;
 import retrofit2.http.Query;

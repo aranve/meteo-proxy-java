@@ -15,7 +15,7 @@ public class RetryConfiguration {
     public RetryRegistry retryRegistry() {
         RetryConfig config = RetryConfig.<Response<?>>custom()
                 .retryOnResult(response -> !response.isSuccessful())
-                .intervalBiFunction((attempt, either) -> Duration.ofSeconds(2).toMillis())
+                .intervalBiFunction((_, _) -> Duration.ofSeconds(2).toMillis())
                 .build();
 
         return RetryRegistry.of(config);

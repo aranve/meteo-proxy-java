@@ -1,8 +1,11 @@
 package meteoproxy.domain.meteo;
 
-import meteoproxy.connector.openmeteo.CurrentDto;
-import meteoproxy.connector.openmeteo.GetForecastResponse;
+import meteoproxy.connector.openmeteo.dto.CurrentDto;
+import meteoproxy.connector.openmeteo.dto.GetForecastResponse;
 import meteoproxy.connector.openmeteo.OpenMeteoConnector;
+import meteoproxy.domain.meteo.model.CurrentWeather;
+import meteoproxy.domain.meteo.model.Location;
+import meteoproxy.domain.meteo.model.Weather;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;

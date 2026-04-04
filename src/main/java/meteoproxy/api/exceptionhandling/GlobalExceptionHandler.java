@@ -1,4 +1,4 @@
-package meteoproxy.api;
+package meteoproxy.api.exceptionhandling;
 
 import meteoproxy.domain.exception.ExternalApiException;
 import meteoproxy.domain.exception.ValidationException;
@@ -12,11 +12,11 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
-    private static final Logger logger = LoggerFactory.getLogger(GlobalExceptionHandler.class);
+    private static final Logger LOG = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
     @ExceptionHandler(ValidationException.class)
     public ResponseEntity<ErrorMessage> handleValidationException(ValidationException ex) {
-        logger.warn("Validation error: {}", ex.getMessage());
+        LOG.warn("Validation error: {}", ex.getMessage());
         return ResponseEntity.badRequest()
                 .contentType(MediaType.APPLICATION_JSON)
                 .body(new ErrorMessage(ex.getMessage()));
@@ -24,7 +24,15 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(ExternalApiException.class)
     public ResponseEntity<ErrorMessage> handleExternalApiException(ExternalApiException ex) {
-        logger.error("External api error: {}", ex.getMessage());
+        LOG.error("External api error: {}", ex.getMessage());
+        return ResponseEntity.internalServerError()
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(new ErrorMessage("Something went wrong. Try again later."));
+    }
+
+    @ExceptionHandler(RuntimeException.class)
+    public ResponseEntity<ErrorMessage> handleException(RuntimeException ex) {
+        LOG.error("Unexpected exception occurred during execution: {}", ex.getMessage());
         return ResponseEntity.internalServerError()
                 .contentType(MediaType.APPLICATION_JSON)
                 .body(new ErrorMessage("Something went wrong. Try again later."));

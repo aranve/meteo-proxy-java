@@ -2,12 +2,12 @@ package meteoproxy.api;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import meteoproxy.MeteoProxyApp;
-import meteoproxy.connector.openmeteo.CurrentDto;
-import meteoproxy.connector.openmeteo.GetForecastResponse;
+import meteoproxy.connector.openmeteo.dto.CurrentDto;
+import meteoproxy.connector.openmeteo.dto.GetForecastResponse;
 import meteoproxy.connector.openmeteo.OpenMeteoClient;
-import meteoproxy.domain.meteo.CurrentWeather;
-import meteoproxy.domain.meteo.Location;
-import meteoproxy.domain.meteo.Weather;
+import meteoproxy.domain.meteo.model.CurrentWeather;
+import meteoproxy.domain.meteo.model.Location;
+import meteoproxy.domain.meteo.model.Weather;
 import okhttp3.Credentials;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;

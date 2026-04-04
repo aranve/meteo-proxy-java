@@ -19,7 +19,7 @@ public class SecurityConfig {
     private static final String[] WHITELISTED_URIS = {"/actuator/health/**"};
 
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+    public SecurityFilterChain securityFilterChain(HttpSecurity http) {
         return http
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.GET, WHITELISTED_URIS).permitAll()

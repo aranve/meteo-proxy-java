@@ -1,5 +1,6 @@
 package meteoproxy.connector.openmeteo;
 
+import meteoproxy.connector.openmeteo.dto.GetForecastResponse;
 import meteoproxy.domain.exception.ExternalApiException;
 import io.github.resilience4j.retry.Retry;
 import io.github.resilience4j.retry.RetryConfig;
