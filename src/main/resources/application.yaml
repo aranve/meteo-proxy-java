@@ -1,0 +1,20 @@
+spring:
+  application:
+    name: meteoproxy
+
+logging:
+  level:
+    org.zalando.logbook: TRACE
+
+logbook:
+  obfuscate:
+    headers:
+      - Authorization
+  predicate:
+    exclude:
+      - path: '/actuator/health/**'
+
+external:
+  open-meteo-api:
+    url: 'https://api.open-meteo.com/v1/'
+
