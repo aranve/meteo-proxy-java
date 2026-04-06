@@ -1,0 +1,4 @@
+retry:
+  max-attempts: 2
+  delay-seconds: 0
+

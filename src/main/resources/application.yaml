@@ -14,6 +14,10 @@ logbook:
     exclude:
       - path: '/actuator/health/**'
 
+retry:
+  max-attempts: 2
+  delay-seconds: 2
+
 external:
   open-meteo-api:
     url: 'https://api.open-meteo.com/v1/'

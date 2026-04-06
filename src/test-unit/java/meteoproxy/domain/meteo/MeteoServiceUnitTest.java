@@ -14,7 +14,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-class MeteoServiceTest {
+class MeteoServiceUnitTest {
 
     private final OpenMeteoConnector openMeteoConnector = mock(OpenMeteoConnector.class);
     private final MeteoService sut = new MeteoService(openMeteoConnector);

@@ -15,9 +15,7 @@
     <description>Java port of meteoproxy-kotlin</description>
     <properties>
         <java.version>25</java.version>
-        <retrofit.version>3.0.0</retrofit.version>
         <logbook.version>4.0.0-RC.1</logbook.version>
-        <resilience4j.version>2.3.0</resilience4j.version>
         <slf4j.version>2.0.17</slf4j.version>
         <caffeine.version>3.2.3</caffeine.version>
         <commons.validator.version>1.10.1</commons.validator.version>
@@ -45,22 +43,14 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-cache</artifactId>
         </dependency>
-
-        <!-- Retrofit -->
         <dependency>
-            <groupId>com.squareup.retrofit2</groupId>
-            <artifactId>retrofit</artifactId>
-            <version>${retrofit.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>com.squareup.retrofit2</groupId>
-            <artifactId>converter-jackson</artifactId>
-            <version>${retrofit.version}</version>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-webflux</artifactId>
         </dependency>
 
         <!-- Jackson -->
         <dependency>
-            <groupId>com.fasterxml.jackson.core</groupId>
+            <groupId>tools.jackson.core</groupId>
             <artifactId>jackson-databind</artifactId>
         </dependency>
 
@@ -69,11 +59,6 @@
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-api</artifactId>
             <version>${slf4j.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>org.zalando</groupId>
-            <artifactId>logbook-okhttp</artifactId>
-            <version>${logbook.version}</version>
         </dependency>
         <dependency>
             <groupId>org.zalando</groupId>
@@ -88,13 +73,6 @@
             <version>${caffeine.version}</version>
         </dependency>
 
-        <!-- Resilience4j -->
-        <dependency>
-            <groupId>io.github.resilience4j</groupId>
-            <artifactId>resilience4j-retry</artifactId>
-            <version>${resilience4j.version}</version>
-        </dependency>
-
         <!-- Validation -->
         <dependency>
             <groupId>commons-validator</groupId>
@@ -102,7 +80,7 @@
             <version>${commons.validator.version}</version>
         </dependency>
 
-        <!-- Test dependencies -->
+        <!-- Test -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
@@ -114,12 +92,6 @@
             <version>${mockito.version}</version>
             <scope>test</scope>
         </dependency>
-        <dependency>
-            <groupId>com.squareup.retrofit2</groupId>
-            <artifactId>retrofit-mock</artifactId>
-            <version>${retrofit.version}</version>
-            <scope>test</scope>
-        </dependency>
     </dependencies>
 
     <build>
@@ -127,6 +99,105 @@
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
+            </plugin>
+
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>build-helper-maven-plugin</artifactId>
+                <version>3.6.0</version>
+                <executions>
+                    <execution>
+                        <id>add-test-sources</id>
+                        <phase>generate-test-sources</phase>
+                        <goals>
+                            <goal>add-test-source</goal>
+                        </goals>
+                        <configuration>
+                            <sources>
+                                <source>src/test-unit/java</source>
+                                <source>src/test-component/java</source>
+                                <source>src/test-integration/java</source>
+                            </sources>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>add-test-resources</id>
+                        <phase>generate-test-resources</phase>
+                        <goals>
+                            <goal>add-test-resource</goal>
+                        </goals>
+                        <configuration>
+                            <resources>
+                                <resource>
+                                    <directory>src/test-component/resources</directory>
+                                </resource>
+                                <resource>
+                                    <directory>src/test-integration/resources</directory>
+                                </resource>
+                            </resources>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <executions>
+                    <!-- Disable default test execution -->
+                    <execution>
+                        <id>default-test</id>
+                        <phase>none</phase>
+                    </execution>
+                    <!-- Unit Tests Execution -->
+                    <execution>
+                        <id>unit-tests</id>
+                        <phase>test</phase>
+                        <goals>
+                            <goal>test</goal>
+                        </goals>
+                        <configuration>
+                            <testSourceDirectory>src/test-unit/java</testSourceDirectory>
+                            <includes>
+                                <include>**/*UnitTest.java</include>
+                            </includes>
+                        </configuration>
+                    </execution>
+                    <!-- Component Tests Execution -->
+                    <execution>
+                        <id>component-tests</id>
+                        <phase>test</phase>
+                        <goals>
+                            <goal>test</goal>
+                        </goals>
+                        <configuration>
+                            <testSourceDirectory>src/test-component/java</testSourceDirectory>
+                            <includes>
+                                <include>**/*ComponentTest.java</include>
+                            </includes>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-failsafe-plugin</artifactId>
+                <executions>
+                    <!-- Integration Tests Execution -->
+                    <execution>
+                        <id>integration-tests</id>
+                        <goals>
+                            <goal>integration-test</goal>
+                            <goal>verify</goal>
+                        </goals>
+                        <configuration>
+                            <testSourceDirectory>src/test-integration/java</testSourceDirectory>
+                            <includes>
+                                <include>**/*IntegrationTest.java</include>
+                            </includes>
+                        </configuration>
+                    </execution>
+                </executions>
             </plugin>
         </plugins>
     </build>

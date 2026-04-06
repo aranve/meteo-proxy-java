@@ -1,37 +1,36 @@
 package meteoproxy.connector.openmeteo;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import io.github.resilience4j.retry.RetryRegistry;
-import okhttp3.OkHttpClient;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import retrofit2.Retrofit;
-import retrofit2.converter.jackson.JacksonConverterFactory;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.client.reactive.ReactorClientHttpConnector;
+import org.springframework.web.reactive.function.client.ExchangeFilterFunction;
+import org.springframework.web.reactive.function.client.WebClient;
+import reactor.netty.http.client.HttpClient;
 
 @Configuration
 public class OpenMeteoConfig {
 
     @Bean
-    public OpenMeteoClient openMeteoClient(
+    public WebClient openMeteoClient(
             @Value("${external.open-meteo-api.url}") String url,
-            ObjectMapper objectMapper,
-            OkHttpClient okHttpClient
+            HttpClient httpClient,
+            ExchangeFilterFunction retryFilter
     ) {
-        return new Retrofit.Builder()
+        return WebClient.builder()
                 .baseUrl(url)
-                .addConverterFactory(JacksonConverterFactory.create(objectMapper))
-                .client(okHttpClient)
-                .build()
-                .create(OpenMeteoClient.class);
+                .defaultHeader(HttpHeaders.ACCEPT, MediaType.APPLICATION_JSON_VALUE)
+                .clientConnector(new ReactorClientHttpConnector(httpClient))
+                .filter(retryFilter)
+                .build();
     }
 
     @Bean
-    public OpenMeteoConnector openMeteoConnector(OpenMeteoClient openMeteoClient, RetryRegistry retryRegistry) {
-        return new OpenMeteoConnector(
-                openMeteoClient,
-                retryRegistry.retry("openMeteoConnector")
-        );
+    public OpenMeteoConnector openMeteoConnector(
+            WebClient openMeteoClient
+    ) {
+        return new OpenMeteoConnector(openMeteoClient);
     }
 }
-
