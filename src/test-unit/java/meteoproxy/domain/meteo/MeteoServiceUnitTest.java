@@ -1,16 +1,17 @@
 package meteoproxy.domain.meteo;
 
+import meteoproxy.connector.openmeteo.OpenMeteoConnector;
 import meteoproxy.connector.openmeteo.dto.CurrentDto;
 import meteoproxy.connector.openmeteo.dto.GetForecastResponse;
-import meteoproxy.connector.openmeteo.OpenMeteoConnector;
 import meteoproxy.domain.meteo.model.CurrentWeather;
 import meteoproxy.domain.meteo.model.Location;
 import meteoproxy.domain.meteo.model.Weather;
 import org.junit.jupiter.api.Test;
+import reactor.core.publisher.Mono;
+import reactor.test.StepVerifier;
 
 import java.math.BigDecimal;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -27,22 +28,22 @@ class MeteoServiceUnitTest {
                 new CurrentDto("2026-01-21T12:00", new BigDecimal("12.3"), new BigDecimal("5.4"))
         );
         when(openMeteoConnector.getCurrentForecast(new BigDecimal("52.52"), new BigDecimal("13.41")))
-                .thenReturn(response);
+                .thenReturn(Mono.just(response));
 
         BigDecimal lat = new BigDecimal("52.5249");
         BigDecimal lon = new BigDecimal("13.4051");
 
-        // when
-        Weather result = sut.getCurrentWeather(lat, lon);
-
-        // then
         Weather expectedResult = new Weather(
                 new Location(lat, lon),
                 new CurrentWeather(new BigDecimal("12.3"), new BigDecimal("5.4")),
                 "open-meteo",
                 "2026-01-21T12:00:00Z"
         );
-        assertEquals(expectedResult, result);
+
+        // when + then
+        StepVerifier.create(sut.getCurrentWeather(lat, lon))
+                .expectNext(expectedResult)
+                .verifyComplete();
     }
 }
 

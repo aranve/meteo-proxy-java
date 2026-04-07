@@ -1,9 +1,12 @@
 package meteoproxy.config;
 
+import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
-import org.springframework.cache.caffeine.CaffeineCacheManager;
+import meteoproxy.connector.openmeteo.ForecastCacheKey;
+import meteoproxy.connector.openmeteo.dto.GetForecastResponse;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import reactor.core.publisher.Mono;
 
 import java.util.concurrent.TimeUnit;
 
@@ -11,10 +14,10 @@ import java.util.concurrent.TimeUnit;
 public class CacheConfig {
 
     @Bean
-    public CaffeineCacheManager cacheManager() {
-        CaffeineCacheManager manager = new CaffeineCacheManager();
-        manager.setCaffeine(Caffeine.newBuilder().expireAfterWrite(60, TimeUnit.SECONDS));
-        return manager;
+    public Cache<ForecastCacheKey, Mono<GetForecastResponse>> forecastCache() {
+        return Caffeine.newBuilder()
+                .expireAfterWrite(60, TimeUnit.SECONDS)
+                .maximumSize(5000)
+                .build();
     }
 }
-

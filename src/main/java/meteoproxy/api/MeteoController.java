@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import reactor.core.publisher.Mono;
 
 import java.math.BigDecimal;
 
@@ -25,14 +26,13 @@ public class MeteoController {
     }
 
     @GetMapping("weather")
-    public Weather getCurrentWeather(
+    public Mono<Weather> getCurrentWeather(
             @RequestParam(name = "lat") BigDecimal latitude,
             @RequestParam(name = "lon") BigDecimal longitude
     ) {
         LOG.info("Getting weather for latitude: {}, longitude: {}", latitude, longitude);
-        CoordinatesValidator.validateLatitude(latitude);
-        CoordinatesValidator.validateLongitude(longitude);
-        return meteoService.getCurrentWeather(latitude, longitude);
+        return CoordinatesValidator.validateCoordinates(latitude, longitude)
+                .then(Mono.defer(() -> meteoService.getCurrentWeather(latitude, longitude)));
     }
 }
 

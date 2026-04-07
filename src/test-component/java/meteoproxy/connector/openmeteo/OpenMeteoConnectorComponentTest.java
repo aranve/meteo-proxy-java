@@ -1,5 +1,7 @@
 package meteoproxy.connector.openmeteo;
 
+import com.github.benmanes.caffeine.cache.Cache;
+import meteoproxy.config.CacheConfig;
 import meteoproxy.config.HttpConfig;
 import meteoproxy.config.RetryConfig;
 import meteoproxy.connector.openmeteo.dto.GetForecastResponse;
@@ -19,12 +21,11 @@ import org.springframework.web.reactive.function.client.ExchangeFunction;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import reactor.test.StepVerifier;
 
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
@@ -32,7 +33,8 @@ import static org.mockito.Mockito.*;
 @SpringBootTest(classes = {
         OpenMeteoConfig.class,
         HttpConfig.class,
-        RetryConfig.class
+        RetryConfig.class,
+        CacheConfig.class
 })
 class OpenMeteoConnectorComponentTest {
 
@@ -42,6 +44,9 @@ class OpenMeteoConnectorComponentTest {
 
     @Autowired
     private ExchangeFilterFunction retryFilter;
+
+    @Autowired
+    private Cache<ForecastCacheKey, Mono<GetForecastResponse>> forecastCache;
 
     private ExchangeFunction exchangeFunction;
     private OpenMeteoConnector sut;
@@ -53,7 +58,8 @@ class OpenMeteoConnectorComponentTest {
                 .exchangeFunction(exchangeFunction)
                 .filter(retryFilter)
                 .build();
-        sut = new OpenMeteoConnector(webClient);
+        forecastCache.invalidateAll();
+        sut = new OpenMeteoConnector(webClient, forecastCache);
     }
 
     @Test
@@ -62,11 +68,11 @@ class OpenMeteoConnectorComponentTest {
         when(exchangeFunction.exchange(any()))
                 .thenReturn(Mono.just(okResponse()));
 
-        // when
-        GetForecastResponse result = sut.getCurrentForecast(LATITUDE, LONGITUDE);
+        // when + then
+        StepVerifier.create(sut.getCurrentForecast(LATITUDE, LONGITUDE))
+                .expectNextMatches(response -> "Europe/Berlin".equals(response.timezone()))
+                .verifyComplete();
 
-        // then
-        assertEquals("Europe/Berlin", result.timezone());
         verify(exchangeFunction, times(1)).exchange(any());
     }
 
@@ -77,11 +83,11 @@ class OpenMeteoConnectorComponentTest {
                 .thenReturn(Mono.just(serverErrorResponse()))
                 .thenReturn(Mono.just(okResponse()));
 
-        // when
-        GetForecastResponse result = sut.getCurrentForecast(LATITUDE, LONGITUDE);
+        // when + then
+        StepVerifier.create(sut.getCurrentForecast(LATITUDE, LONGITUDE))
+                .expectNextMatches(response -> "Europe/Berlin".equals(response.timezone()))
+                .verifyComplete();
 
-        // then
-        assertEquals("Europe/Berlin", result.timezone());
         verify(exchangeFunction, times(2)).exchange(any());
     }
 
@@ -94,8 +100,29 @@ class OpenMeteoConnectorComponentTest {
                 .thenReturn(Mono.just(serverErrorResponse()));
 
         // when + then
-        assertThrows(ExternalApiException.class, () -> sut.getCurrentForecast(LATITUDE, LONGITUDE));
+        StepVerifier.create(sut.getCurrentForecast(LATITUDE, LONGITUDE))
+                .expectError(ExternalApiException.class)
+                .verify();
+
         verify(exchangeFunction, times(3)).exchange(any());
+    }
+
+    @Test
+    void shouldCacheResultsAndNotCallApiOnSecondRequest() {
+        // given
+        when(exchangeFunction.exchange(any()))
+                .thenReturn(Mono.just(okResponse()));
+
+        // when
+        StepVerifier.create(sut.getCurrentForecast(LATITUDE, LONGITUDE))
+                .expectNextMatches(response -> "Europe/Berlin".equals(response.timezone()))
+                .verifyComplete();
+        StepVerifier.create(sut.getCurrentForecast(LATITUDE, LONGITUDE))
+                .expectNextMatches(response -> "Europe/Berlin".equals(response.timezone()))
+                .verifyComplete();
+
+        // then
+        verify(exchangeFunction, times(1)).exchange(any());
     }
 
     private static ClientResponse okResponse() {
@@ -111,4 +138,3 @@ class OpenMeteoConnectorComponentTest {
         return ClientResponse.create(HttpStatus.INTERNAL_SERVER_ERROR).build();
     }
 }
-

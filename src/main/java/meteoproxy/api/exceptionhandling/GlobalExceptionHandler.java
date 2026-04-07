@@ -8,6 +8,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import reactor.core.publisher.Mono;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
@@ -15,27 +16,27 @@ public class GlobalExceptionHandler {
     private static final Logger LOG = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
     @ExceptionHandler(ValidationException.class)
-    public ResponseEntity<ErrorMessage> handleValidationException(ValidationException ex) {
+    public Mono<ResponseEntity<ErrorMessage>> handleValidationException(ValidationException ex) {
         LOG.warn("Validation error: {}", ex.getMessage());
-        return ResponseEntity.badRequest()
+        return Mono.just(ResponseEntity.badRequest()
                 .contentType(MediaType.APPLICATION_JSON)
-                .body(new ErrorMessage(ex.getMessage()));
+                .body(new ErrorMessage(ex.getMessage())));
     }
 
     @ExceptionHandler(ExternalApiException.class)
-    public ResponseEntity<ErrorMessage> handleExternalApiException(ExternalApiException ex) {
+    public Mono<ResponseEntity<ErrorMessage>> handleExternalApiException(ExternalApiException ex) {
         LOG.error("External api error: {}", ex.getMessage());
-        return ResponseEntity.internalServerError()
+        return Mono.just(ResponseEntity.internalServerError()
                 .contentType(MediaType.APPLICATION_JSON)
-                .body(new ErrorMessage("Something went wrong. Try again later."));
+                .body(new ErrorMessage("Something went wrong. Try again later.")));
     }
 
     @ExceptionHandler(RuntimeException.class)
-    public ResponseEntity<ErrorMessage> handleException(RuntimeException ex) {
+    public Mono<ResponseEntity<ErrorMessage>> handleException(RuntimeException ex) {
         LOG.error("Unexpected exception occurred during execution: {}", ex.getMessage());
-        return ResponseEntity.internalServerError()
+        return Mono.just(ResponseEntity.internalServerError()
                 .contentType(MediaType.APPLICATION_JSON)
-                .body(new ErrorMessage("Something went wrong. Try again later."));
+                .body(new ErrorMessage("Something went wrong. Try again later.")));
     }
 }
 

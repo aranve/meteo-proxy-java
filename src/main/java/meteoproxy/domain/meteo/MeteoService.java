@@ -1,11 +1,11 @@
 package meteoproxy.domain.meteo;
 
-import meteoproxy.connector.openmeteo.dto.GetForecastResponse;
 import meteoproxy.connector.openmeteo.OpenMeteoConnector;
 import meteoproxy.domain.meteo.model.CurrentWeather;
 import meteoproxy.domain.meteo.model.Location;
 import meteoproxy.domain.meteo.model.Weather;
 import meteoproxy.domain.utils.DateTimeUtils;
+import reactor.core.publisher.Mono;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -18,18 +18,17 @@ public class MeteoService {
         this.openMeteoConnector = openMeteoConnector;
     }
 
-    public Weather getCurrentWeather(BigDecimal latitude, BigDecimal longitude) {
+    public Mono<Weather> getCurrentWeather(BigDecimal latitude, BigDecimal longitude) {
         BigDecimal roundedLat = latitude.setScale(2, RoundingMode.HALF_UP);
         BigDecimal roundedLon = longitude.setScale(2, RoundingMode.HALF_UP);
 
-        GetForecastResponse response = openMeteoConnector.getCurrentForecast(roundedLat, roundedLon);
-
-        return new Weather(
-                new Location(latitude, longitude),
-                new CurrentWeather(response.current().temperature(), response.current().windSpeed()),
-                "open-meteo",
-                DateTimeUtils.convertToZuluDateTime(response.current().time(), response.timezone())
-        );
+        return openMeteoConnector.getCurrentForecast(roundedLat, roundedLon)
+                .map(response -> new Weather(
+                        new Location(latitude, longitude),
+                        new CurrentWeather(response.current().temperature(), response.current().windSpeed()),
+                        "open-meteo",
+                        DateTimeUtils.convertToZuluDateTime(response.current().time(), response.timezone())
+                ));
     }
 }
 
