@@ -1,0 +1,27 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: meteoproxy-java-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: meteoproxy-java
+  template:
+    metadata:
+      labels:
+        app: meteoproxy-java
+    spec:
+      containers:
+        - name: meteoproxy-java
+          image: aranve/meteoproxy-java:latest
+          ports:
+            - containerPort: 8080
+          resources:
+            requests:
+              memory: 256Mi
+              cpu: 0.05
+            limits:
+              memory: 512Mi
+              cpu: 0.25
+
