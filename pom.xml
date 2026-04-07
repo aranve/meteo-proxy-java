@@ -111,9 +111,9 @@
                         </goals>
                         <configuration>
                             <sources>
-                                <source>src/test-unit/java</source>
-                                <source>src/test-component/java</source>
-                                <source>src/test-integration/java</source>
+                                <source>src/test/unit-test/java</source>
+                                <source>src/test/component-test/java</source>
+                                <source>src/test/integration-test/java</source>
                             </sources>
                         </configuration>
                     </execution>
@@ -126,10 +126,10 @@
                         <configuration>
                             <resources>
                                 <resource>
-                                    <directory>src/test-component/resources</directory>
+                                    <directory>src/test/component-test/resources</directory>
                                 </resource>
                                 <resource>
-                                    <directory>src/test-integration/resources</directory>
+                                    <directory>src/test/integration-test/resources</directory>
                                 </resource>
                             </resources>
                         </configuration>
@@ -154,7 +154,7 @@
                             <goal>test</goal>
                         </goals>
                         <configuration>
-                            <testSourceDirectory>src/test-unit/java</testSourceDirectory>
+                            <testSourceDirectory>src/test/unit-test/java</testSourceDirectory>
                             <includes>
                                 <include>**/*UnitTest.java</include>
                             </includes>
@@ -168,7 +168,7 @@
                             <goal>test</goal>
                         </goals>
                         <configuration>
-                            <testSourceDirectory>src/test-component/java</testSourceDirectory>
+                            <testSourceDirectory>src/test/component-test/java</testSourceDirectory>
                             <includes>
                                 <include>**/*ComponentTest.java</include>
                             </includes>
@@ -188,7 +188,7 @@
                             <goal>verify</goal>
                         </goals>
                         <configuration>
-                            <testSourceDirectory>src/test-integration/java</testSourceDirectory>
+                            <testSourceDirectory>src/test/integration-test/java</testSourceDirectory>
                             <includes>
                                 <include>**/*IntegrationTest.java</include>
                             </includes>
