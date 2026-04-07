@@ -1,12 +1,12 @@
 package meteoproxy.api;
 
 import meteoproxy.MeteoProxyApp;
+import meteoproxy.api.dto.CurrentWeatherDto;
+import meteoproxy.api.dto.LocationDto;
+import meteoproxy.api.dto.WeatherDto;
 import meteoproxy.connector.openmeteo.OpenMeteoConnector;
 import meteoproxy.connector.openmeteo.dto.CurrentDto;
 import meteoproxy.connector.openmeteo.dto.GetForecastResponse;
-import meteoproxy.domain.meteo.model.CurrentWeather;
-import meteoproxy.domain.meteo.model.Location;
-import meteoproxy.domain.meteo.model.Weather;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
@@ -62,9 +62,9 @@ class MeteoControllerComponentTest {
                 .thenReturn(Mono.just(forecastResponse));
 
         // when + then
-        Weather expectedResponse = new Weather(
-                new Location(new BigDecimal("20.10"), new BigDecimal("40.20")),
-                new CurrentWeather(new BigDecimal("2.3"), new BigDecimal("12.3")),
+        WeatherDto expectedResponse = new WeatherDto(
+                new LocationDto(new BigDecimal("20.10"), new BigDecimal("40.20")),
+                new CurrentWeatherDto(new BigDecimal("2.3"), new BigDecimal("12.3")),
                 "open-meteo",
                 "2026-01-23T13:15:00Z"
         );
@@ -79,7 +79,7 @@ class MeteoControllerComponentTest {
                 .accept(MediaType.APPLICATION_JSON)
                 .exchange()
                 .expectStatus().isOk()
-                .expectBody(Weather.class)
+                .expectBody(WeatherDto.class)
                 .isEqualTo(expectedResponse);
     }
 

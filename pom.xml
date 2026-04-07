@@ -10,7 +10,7 @@
     </parent>
     <groupId>meteoproxy-java</groupId>
     <artifactId>meteoproxy-java</artifactId>
-    <version>0.0.1-SNAPSHOT</version>
+    <version>1.0.0-SNAPSHOT</version>
     <name>meteoproxy-java</name>
     <description>Java port of meteoproxy-kotlin</description>
     <properties>
@@ -20,6 +20,7 @@
         <caffeine.version>3.2.3</caffeine.version>
         <commons.validator.version>1.10.1</commons.validator.version>
         <mockito.version>5.17.0</mockito.version>
+        <openapi.version>3.0.2</openapi.version>
     </properties>
     <dependencies>
         <!-- Spring Boot -->
@@ -63,6 +64,12 @@
             <groupId>com.github.ben-manes.caffeine</groupId>
             <artifactId>caffeine</artifactId>
             <version>${caffeine.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.springdoc</groupId>
+            <artifactId>springdoc-openapi-starter-webflux-ui</artifactId>
+            <version>${openapi.version}</version>
         </dependency>
 
         <!-- Test -->

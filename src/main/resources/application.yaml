@@ -2,6 +2,10 @@ spring:
   application:
     name: meteoproxy
 
+springdoc:
+  swagger-ui:
+    disable-swagger-default-url: true
+
 logging:
   level:
     org.zalando.logbook: TRACE
