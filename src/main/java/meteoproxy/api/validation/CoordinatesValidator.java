@@ -1,7 +1,6 @@
 package meteoproxy.api.validation;
 
 import meteoproxy.domain.exception.ValidationException;
-import reactor.core.publisher.Mono;
 
 import java.math.BigDecimal;
 
@@ -15,23 +14,27 @@ public class CoordinatesValidator {
     private CoordinatesValidator() {
     }
 
-    public static Mono<Void> validateCoordinates(BigDecimal latitude, BigDecimal longitude) {
-        return validateLatitude(latitude)
-                .then(validateLongitude(longitude));
+    public static void validateCoordinates(BigDecimal latitude, BigDecimal longitude) {
+        validateLatitude(latitude);
+        validateLongitude(longitude);
     }
 
-    static Mono<Void> validateLatitude(BigDecimal latitude) {
+    static void validateLatitude(BigDecimal latitude) {
+        if (latitude == null) {
+            throw new ValidationException("Latitude cannot be null");
+        }
         if (latitude.compareTo(MIN_LATITUDE) < 0 || latitude.compareTo(MAX_LATITUDE) > 0) {
-            return Mono.error(new ValidationException("Latitude must be between -90 and 90"));
+            throw new ValidationException("Latitude must be between -90 and 90");
         }
-        return Mono.empty();
     }
 
-    static Mono<Void> validateLongitude(BigDecimal longitude) {
-        if (longitude.compareTo(MIN_LONGITUDE) < 0 || longitude.compareTo(MAX_LONGITUDE) > 0) {
-            return Mono.error(new ValidationException("Longitude must be between -180 and 180"));
+    static void validateLongitude(BigDecimal longitude) {
+        if (longitude == null) {
+            throw new ValidationException("Longitude cannot be null");
         }
-        return Mono.empty();
+        if (longitude.compareTo(MIN_LONGITUDE) < 0 || longitude.compareTo(MAX_LONGITUDE) > 0) {
+            throw new ValidationException("Longitude must be between -180 and 180");
+        }
     }
 }
 

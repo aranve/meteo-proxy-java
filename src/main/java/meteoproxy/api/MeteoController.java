@@ -16,7 +16,6 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-import reactor.core.publisher.Mono;
 
 import java.math.BigDecimal;
 
@@ -56,16 +55,16 @@ public class MeteoController {
             )
     })
     @GetMapping("weather")
-    public Mono<WeatherDto> getCurrentWeather(
+    public WeatherDto getCurrentWeather(
             @Parameter(description = "Latitude coordinate (must be between -90 and 90)", required = true, example = "52.52")
             @RequestParam(name = "lat") BigDecimal latitude,
             @Parameter(description = "Longitude coordinate (must be between -180 and 180)", required = true, example = "13.41")
             @RequestParam(name = "lon") BigDecimal longitude
     ) {
         LOG.info("Getting weather for latitude: {}, longitude: {}", latitude, longitude);
-        return CoordinatesValidator.validateCoordinates(latitude, longitude)
-                .then(Mono.defer(() -> meteoService.getCurrentWeather(latitude, longitude)))
-                .map(WeatherDto::from);
+        CoordinatesValidator.validateCoordinates(latitude, longitude);
+        var weather = meteoService.getCurrentWeather(latitude, longitude);
+        return WeatherDto.from(weather);
     }
 }
 

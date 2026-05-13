@@ -1,140 +1,135 @@
 package meteoproxy.connector.openmeteo;
 
 import com.github.benmanes.caffeine.cache.Cache;
+import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
+import io.github.resilience4j.retry.RetryRegistry;
 import meteoproxy.config.CacheConfig;
 import meteoproxy.config.HttpConfig;
-import meteoproxy.config.RetryConfig;
 import meteoproxy.connector.openmeteo.dto.GetForecastResponse;
 import meteoproxy.domain.exception.ExternalApiException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.core.io.buffer.DefaultDataBufferFactory;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpStatus;
+import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
+import org.springframework.http.client.ClientHttpRequestFactory;
 import org.springframework.test.context.ActiveProfiles;
-import org.springframework.web.reactive.function.client.ClientResponse;
-import org.springframework.web.reactive.function.client.ExchangeFilterFunction;
-import org.springframework.web.reactive.function.client.ExchangeFunction;
-import org.springframework.web.reactive.function.client.WebClient;
-import reactor.core.publisher.Flux;
-import reactor.core.publisher.Mono;
-import reactor.test.StepVerifier;
+import org.springframework.test.web.client.MockRestServiceServer;
+import org.springframework.web.client.RestClient;
 
 import java.math.BigDecimal;
-import java.nio.charset.StandardCharsets;
 
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.*;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
+import static org.springframework.test.web.client.response.MockRestResponseCreators.withServerError;
+import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
 
 @ActiveProfiles("component-test")
-@SpringBootTest(classes = {
-        OpenMeteoConfig.class,
-        HttpConfig.class,
-        RetryConfig.class,
-        CacheConfig.class
-})
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE)
+@Import({HttpConfig.class, CacheConfig.class})
 class OpenMeteoConnectorComponentTest {
 
     private static final BigDecimal LATITUDE = new BigDecimal("52.52");
     private static final BigDecimal LONGITUDE = new BigDecimal("13.41");
-    private static final String FORECAST_JSON = "{\"timezone\":\"Europe/Berlin\",\"current\":null}";
+    private static final String FORECAST_JSON = "{\"timezone\":\"Europe/Berlin\",\"current\":{\"time\":\"2026-01-23T13:15\",\"temperature\":10.5,\"windSpeed\":5.2}}";
 
     @Autowired
-    private ExchangeFilterFunction retryFilter;
+    private Cache<ForecastCacheKey, GetForecastResponse> forecastCache;
 
     @Autowired
-    private Cache<ForecastCacheKey, Mono<GetForecastResponse>> forecastCache;
+    private ClientHttpRequestFactory clientHttpRequestFactory;
 
-    private ExchangeFunction exchangeFunction;
+    @Autowired
+    private RetryRegistry retryRegistry;
+
+    @Autowired
+    private CircuitBreakerRegistry circuitBreakerRegistry;
+
+    private MockRestServiceServer mockServer;
     private OpenMeteoConnector sut;
 
     @BeforeEach
     void setUp() {
-        exchangeFunction = mock(ExchangeFunction.class);
-        WebClient webClient = WebClient.builder()
-                .exchangeFunction(exchangeFunction)
-                .filter(retryFilter)
-                .build();
+        RestClient.Builder builder = RestClient.builder()
+                .baseUrl("http://test-api.com")
+                .requestFactory(clientHttpRequestFactory);
+
+        mockServer = MockRestServiceServer.bindTo(builder).build();
+        RestClient restClient = builder.build();
+
         forecastCache.invalidateAll();
-        sut = new OpenMeteoConnector(webClient, forecastCache);
+        circuitBreakerRegistry.circuitBreaker("openMeteoApi").reset();
+
+        sut = new OpenMeteoConnector(
+                restClient,
+                forecastCache,
+                retryRegistry.retry("openMeteoApi"),
+                circuitBreakerRegistry.circuitBreaker("openMeteoApi")
+        );
     }
 
     @Test
     void shouldReturnForecast() {
         // given
-        when(exchangeFunction.exchange(any()))
-                .thenReturn(Mono.just(okResponse()));
+        mockServer.expect(requestTo("http://test-api.com/forecast?latitude=52.52&longitude=13.41&current=temperature_2m,wind_speed_10m"))
+                .andRespond(withSuccess(FORECAST_JSON, MediaType.APPLICATION_JSON));
 
-        // when + then
-        StepVerifier.create(sut.getCurrentForecast(LATITUDE, LONGITUDE))
-                .expectNextMatches(response -> "Europe/Berlin".equals(response.timezone()))
-                .verifyComplete();
+        // when
+        GetForecastResponse result = sut.getCurrentForecast(LATITUDE, LONGITUDE);
 
-        verify(exchangeFunction, times(1)).exchange(any());
+        // then
+        assertNotNull(result);
+        assertEquals("Europe/Berlin", result.timezone());
+        assertNotNull(result.current());
+        mockServer.verify();
     }
 
     @Test
     void shouldRetryOnceAndSucceedOnSecondAttempt() {
         // given
-        when(exchangeFunction.exchange(any()))
-                .thenReturn(Mono.just(serverErrorResponse()))
-                .thenReturn(Mono.just(okResponse()));
+        mockServer.expect(requestTo("http://test-api.com/forecast?latitude=52.52&longitude=13.41&current=temperature_2m,wind_speed_10m"))
+                .andRespond(withServerError());
+        mockServer.expect(requestTo("http://test-api.com/forecast?latitude=52.52&longitude=13.41&current=temperature_2m,wind_speed_10m"))
+                .andRespond(withSuccess(FORECAST_JSON, MediaType.APPLICATION_JSON));
 
-        // when + then
-        StepVerifier.create(sut.getCurrentForecast(LATITUDE, LONGITUDE))
-                .expectNextMatches(response -> "Europe/Berlin".equals(response.timezone()))
-                .verifyComplete();
+        // when
+        GetForecastResponse result = sut.getCurrentForecast(LATITUDE, LONGITUDE);
 
-        verify(exchangeFunction, times(2)).exchange(any());
+        // then
+        assertNotNull(result);
+        assertEquals("Europe/Berlin", result.timezone());
+        mockServer.verify();
     }
 
     @Test
     void shouldThrowExternalApiExceptionAfterRetryIsExhausted() {
         // given
-        when(exchangeFunction.exchange(any()))
-                .thenReturn(Mono.just(serverErrorResponse()))
-                .thenReturn(Mono.just(serverErrorResponse()))
-                .thenReturn(Mono.just(serverErrorResponse()));
+        mockServer.expect(requestTo("http://test-api.com/forecast?latitude=52.52&longitude=13.41&current=temperature_2m,wind_speed_10m"))
+                .andRespond(withServerError());
+        mockServer.expect(requestTo("http://test-api.com/forecast?latitude=52.52&longitude=13.41&current=temperature_2m,wind_speed_10m"))
+                .andRespond(withServerError());
 
         // when + then
-        StepVerifier.create(sut.getCurrentForecast(LATITUDE, LONGITUDE))
-                .expectError(ExternalApiException.class)
-                .verify();
-
-        verify(exchangeFunction, times(3)).exchange(any());
+        assertThrows(ExternalApiException.class, () -> sut.getCurrentForecast(LATITUDE, LONGITUDE));
+        mockServer.verify();
     }
 
     @Test
     void shouldCacheResultsAndNotCallApiOnSecondRequest() {
         // given
-        when(exchangeFunction.exchange(any()))
-                .thenReturn(Mono.just(okResponse()));
+        mockServer.expect(requestTo("http://test-api.com/forecast?latitude=52.52&longitude=13.41&current=temperature_2m,wind_speed_10m"))
+                .andRespond(withSuccess(FORECAST_JSON, MediaType.APPLICATION_JSON));
 
         // when
-        StepVerifier.create(sut.getCurrentForecast(LATITUDE, LONGITUDE))
-                .expectNextMatches(response -> "Europe/Berlin".equals(response.timezone()))
-                .verifyComplete();
-        StepVerifier.create(sut.getCurrentForecast(LATITUDE, LONGITUDE))
-                .expectNextMatches(response -> "Europe/Berlin".equals(response.timezone()))
-                .verifyComplete();
+        GetForecastResponse result1 = sut.getCurrentForecast(LATITUDE, LONGITUDE);
+        GetForecastResponse result2 = sut.getCurrentForecast(LATITUDE, LONGITUDE);
 
         // then
-        verify(exchangeFunction, times(1)).exchange(any());
-    }
-
-    private static ClientResponse okResponse() {
-        var buffer = DefaultDataBufferFactory.sharedInstance
-                .wrap(OpenMeteoConnectorComponentTest.FORECAST_JSON.getBytes(StandardCharsets.UTF_8));
-        return ClientResponse.create(HttpStatus.OK)
-                .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
-                .body(Flux.just(buffer))
-                .build();
-    }
-
-    private static ClientResponse serverErrorResponse() {
-        return ClientResponse.create(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        assertNotNull(result1);
+        assertNotNull(result2);
+        assertEquals("Europe/Berlin", result1.timezone());
+        assertEquals("Europe/Berlin", result2.timezone());
+        mockServer.verify(); // Only one call was made
     }
 }

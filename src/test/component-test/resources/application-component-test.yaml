@@ -1,4 +1,5 @@
-retry:
-  max-attempts: 2
-  delay-seconds: 0
-
+resilience4j:
+  retry:
+    instances:
+      openMeteoApi:
+        wait-duration: 0s

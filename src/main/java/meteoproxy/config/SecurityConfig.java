@@ -2,20 +2,18 @@ package meteoproxy.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.security.config.annotation.web.reactive.EnableWebFluxSecurity;
-import org.springframework.security.config.web.server.ServerHttpSecurity;
-import org.springframework.security.core.userdetails.MapReactiveUserDetailsService;
+import org.springframework.security.config.Customizer;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.factory.PasswordEncoderFactories;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.security.web.server.SecurityWebFilterChain;
-import org.springframework.security.web.server.ServerAuthenticationEntryPoint;
-
-import static org.springframework.http.HttpStatus.UNAUTHORIZED;
+import org.springframework.security.provisioning.InMemoryUserDetailsManager;
+import org.springframework.security.web.SecurityFilterChain;
 
 @Configuration
-@EnableWebFluxSecurity
+@EnableWebSecurity
 public class SecurityConfig {
 
     private static final String[] WHITELISTED_URIS = {
@@ -27,33 +25,24 @@ public class SecurityConfig {
     };
 
     @Bean
-    public SecurityWebFilterChain securityFilterChain(ServerHttpSecurity http) {
+    public SecurityFilterChain securityFilterChain(HttpSecurity http) {
         return http
-                .authorizeExchange(auth -> auth
-                        .pathMatchers(WHITELISTED_URIS).permitAll()
-                        .anyExchange().authenticated()
+                .authorizeHttpRequests(auth -> auth
+                        .requestMatchers(WHITELISTED_URIS).permitAll()
+                        .anyRequest().authenticated()
                 )
-                .httpBasic(httpBasic -> httpBasic
-                        .authenticationEntryPoint(unauthorizedEntryPoint())
-                )
+                .httpBasic(Customizer.withDefaults())
                 .build();
     }
 
-    private ServerAuthenticationEntryPoint unauthorizedEntryPoint() {
-        return (exchange, _) -> {
-            exchange.getResponse().setStatusCode(UNAUTHORIZED);
-            return exchange.getResponse().setComplete();
-        };
-    }
-
     @Bean
-    public MapReactiveUserDetailsService userDetailsService(PasswordEncoder passwordEncoder) {
+    public InMemoryUserDetailsManager userDetailsService(PasswordEncoder passwordEncoder) {
         UserDetails user = User.builder()
                 .username("user")
                 .password(passwordEncoder.encode("password"))
                 .roles("USER")
                 .build();
-        return new MapReactiveUserDetailsService(user);
+        return new InMemoryUserDetailsManager(user);
     }
 
     @Bean

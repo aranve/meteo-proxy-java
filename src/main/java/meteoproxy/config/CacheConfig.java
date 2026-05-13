@@ -4,9 +4,9 @@ import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import meteoproxy.connector.openmeteo.ForecastCacheKey;
 import meteoproxy.connector.openmeteo.dto.GetForecastResponse;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import reactor.core.publisher.Mono;
 
 import java.util.concurrent.TimeUnit;
 
@@ -14,10 +14,13 @@ import java.util.concurrent.TimeUnit;
 public class CacheConfig {
 
     @Bean
-    public Cache<ForecastCacheKey, Mono<GetForecastResponse>> forecastCache() {
+    public Cache<ForecastCacheKey, GetForecastResponse> forecastCache(
+            @Value("${cache.forecast.ttl-seconds}") int ttlSeconds,
+            @Value("${cache.forecast.max-size}") int maxSize
+    ) {
         return Caffeine.newBuilder()
-                .expireAfterWrite(60, TimeUnit.SECONDS)
-                .maximumSize(5000)
+                .expireAfterWrite(ttlSeconds, TimeUnit.SECONDS)
+                .maximumSize(maxSize)
                 .build();
     }
 }

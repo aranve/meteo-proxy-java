@@ -1,12 +1,13 @@
 package meteoproxy.connector.openmeteo;
 
 import com.github.benmanes.caffeine.cache.Cache;
+import io.github.resilience4j.circuitbreaker.CircuitBreaker;
+import io.github.resilience4j.retry.Retry;
 import meteoproxy.connector.openmeteo.dto.GetForecastResponse;
 import meteoproxy.domain.exception.ExternalApiException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.web.reactive.function.client.WebClient;
-import reactor.core.publisher.Mono;
+import org.springframework.web.client.RestClient;
 
 import java.math.BigDecimal;
 
@@ -15,31 +16,55 @@ public class OpenMeteoConnector {
     private static final Logger LOG = LoggerFactory.getLogger(OpenMeteoConnector.class);
     private static final String DEFAULT_CURRENT_PARAMS = "temperature_2m,wind_speed_10m";
 
-    private final WebClient webClient;
-    private final Cache<ForecastCacheKey, Mono<GetForecastResponse>> cache;
+    private final RestClient restClient;
+    private final Cache<ForecastCacheKey, GetForecastResponse> cache;
+    private final Retry retry;
+    private final CircuitBreaker circuitBreaker;
 
-    public OpenMeteoConnector(WebClient webClient, Cache<ForecastCacheKey, Mono<GetForecastResponse>> cache) {
-        this.webClient = webClient;
+    public OpenMeteoConnector(
+            RestClient restClient,
+            Cache<ForecastCacheKey, GetForecastResponse> cache,
+            Retry retry,
+            CircuitBreaker circuitBreaker
+    ) {
+        this.restClient = restClient;
         this.cache = cache;
+        this.retry = retry;
+        this.circuitBreaker = circuitBreaker;
     }
 
-    public Mono<GetForecastResponse> getCurrentForecast(BigDecimal latitude, BigDecimal longitude) {
+    public GetForecastResponse getCurrentForecast(BigDecimal latitude, BigDecimal longitude) {
         var cacheKey = new ForecastCacheKey(latitude, longitude);
-        return cache.asMap().computeIfAbsent(cacheKey, k -> fetchFromApi(k.latitude(), k.longitude()).cache());
+        return cache.get(cacheKey, k -> getCurrentForecastInternal(k.latitude(), k.longitude()));
     }
 
-    private Mono<GetForecastResponse> fetchFromApi(BigDecimal latitude, BigDecimal longitude) {
-        return webClient.get()
-                .uri(b -> b.path("forecast")
-                        .queryParam("latitude", latitude)
-                        .queryParam("longitude", longitude)
-                        .queryParam("current", DEFAULT_CURRENT_PARAMS)
-                        .build())
-                .retrieve()
-                .bodyToMono(GetForecastResponse.class)
-                .onErrorMap(e -> {
-                    LOG.error("Request to open-meteo failed for latitude: {}, longitude: {}", latitude, longitude, e);
-                    return new ExternalApiException("Could not get current forecast for latitude: " + latitude + ", longitude: " + longitude);
-                });
+    private GetForecastResponse getCurrentForecastInternal(BigDecimal latitude, BigDecimal longitude) {
+        return Retry.decorateSupplier(retry, CircuitBreaker.decorateSupplier(circuitBreaker, () -> fetchFromApi(latitude, longitude))).get();
+    }
+
+    private GetForecastResponse fetchFromApi(BigDecimal latitude, BigDecimal longitude) {
+        try {
+            GetForecastResponse response = restClient.get()
+                    .uri(uriBuilder -> uriBuilder
+                            .path("forecast")
+                            .queryParam("latitude", latitude)
+                            .queryParam("longitude", longitude)
+                            .queryParam("current", DEFAULT_CURRENT_PARAMS)
+                            .build())
+                    .retrieve()
+                    .body(GetForecastResponse.class);
+            
+            if (response == null) {
+                LOG.error("Received null response from open-meteo API for latitude: {}, longitude: {}", latitude, longitude);
+                throw new ExternalApiException("Received null response from external API");
+            }
+            
+            return response;
+        } catch (ExternalApiException e) {
+            throw e;
+        } catch (Exception e) {
+            LOG.error("Request to open-meteo failed for latitude: {}, longitude: {}", latitude, longitude, e);
+            throw new ExternalApiException("Could not get current forecast for latitude: " + latitude + ", longitude: " + longitude);
+        }
     }
 }
