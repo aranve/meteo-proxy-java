@@ -7,11 +7,13 @@ import meteoproxy.config.CacheConfig;
 import meteoproxy.config.HttpConfig;
 import meteoproxy.connector.openmeteo.dto.GetForecastResponse;
 import meteoproxy.domain.exception.ExternalApiException;
+import meteoproxy.domain.meteo.model.Location;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.client.ClientHttpRequestFactory;
 import org.springframework.test.context.ActiveProfiles;
@@ -22,20 +24,18 @@ import java.math.BigDecimal;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
-import static org.springframework.test.web.client.response.MockRestResponseCreators.withServerError;
-import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
+import static org.springframework.test.web.client.response.MockRestResponseCreators.*;
 
 @ActiveProfiles("component-test")
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE)
 @Import({HttpConfig.class, CacheConfig.class})
 class OpenMeteoConnectorComponentTest {
 
-    private static final BigDecimal LATITUDE = new BigDecimal("52.52");
-    private static final BigDecimal LONGITUDE = new BigDecimal("13.41");
+    private static final Location LOCATION = new Location(new BigDecimal("52.52"), new BigDecimal("13.41"));
     private static final String FORECAST_JSON = "{\"timezone\":\"Europe/Berlin\",\"current\":{\"time\":\"2026-01-23T13:15\",\"temperature\":10.5,\"windSpeed\":5.2}}";
 
     @Autowired
-    private Cache<ForecastCacheKey, GetForecastResponse> forecastCache;
+    private Cache<Location, GetForecastResponse> forecastCache;
 
     @Autowired
     private ClientHttpRequestFactory clientHttpRequestFactory;
@@ -76,7 +76,7 @@ class OpenMeteoConnectorComponentTest {
                 .andRespond(withSuccess(FORECAST_JSON, MediaType.APPLICATION_JSON));
 
         // when
-        GetForecastResponse result = sut.getCurrentForecast(LATITUDE, LONGITUDE);
+        GetForecastResponse result = sut.getCurrentForecast(LOCATION);
 
         // then
         assertNotNull(result);
@@ -86,15 +86,17 @@ class OpenMeteoConnectorComponentTest {
     }
 
     @Test
-    void shouldRetryOnceAndSucceedOnSecondAttempt() {
+    void shouldRetryTwiceAndSucceedOnThirdAttempt() {
         // given
+        mockServer.expect(requestTo("http://test-api.com/forecast?latitude=52.52&longitude=13.41&current=temperature_2m,wind_speed_10m"))
+                .andRespond(withServerError());
         mockServer.expect(requestTo("http://test-api.com/forecast?latitude=52.52&longitude=13.41&current=temperature_2m,wind_speed_10m"))
                 .andRespond(withServerError());
         mockServer.expect(requestTo("http://test-api.com/forecast?latitude=52.52&longitude=13.41&current=temperature_2m,wind_speed_10m"))
                 .andRespond(withSuccess(FORECAST_JSON, MediaType.APPLICATION_JSON));
 
         // when
-        GetForecastResponse result = sut.getCurrentForecast(LATITUDE, LONGITUDE);
+        GetForecastResponse result = sut.getCurrentForecast(LOCATION);
 
         // then
         assertNotNull(result);
@@ -109,9 +111,11 @@ class OpenMeteoConnectorComponentTest {
                 .andRespond(withServerError());
         mockServer.expect(requestTo("http://test-api.com/forecast?latitude=52.52&longitude=13.41&current=temperature_2m,wind_speed_10m"))
                 .andRespond(withServerError());
+        mockServer.expect(requestTo("http://test-api.com/forecast?latitude=52.52&longitude=13.41&current=temperature_2m,wind_speed_10m"))
+                .andRespond(withServerError());
 
         // when + then
-        assertThrows(ExternalApiException.class, () -> sut.getCurrentForecast(LATITUDE, LONGITUDE));
+        assertThrows(ExternalApiException.class, () -> sut.getCurrentForecast(LOCATION));
         mockServer.verify();
     }
 
@@ -122,14 +126,25 @@ class OpenMeteoConnectorComponentTest {
                 .andRespond(withSuccess(FORECAST_JSON, MediaType.APPLICATION_JSON));
 
         // when
-        GetForecastResponse result1 = sut.getCurrentForecast(LATITUDE, LONGITUDE);
-        GetForecastResponse result2 = sut.getCurrentForecast(LATITUDE, LONGITUDE);
+        GetForecastResponse result1 = sut.getCurrentForecast(LOCATION);
+        GetForecastResponse result2 = sut.getCurrentForecast(LOCATION);
 
         // then
         assertNotNull(result1);
         assertNotNull(result2);
         assertEquals("Europe/Berlin", result1.timezone());
         assertEquals("Europe/Berlin", result2.timezone());
-        mockServer.verify(); // Only one call was made
+        mockServer.verify();
+    }
+
+    @Test
+    void shouldNotRetryOnClientErrors() {
+        // given
+        mockServer.expect(requestTo("http://test-api.com/forecast?latitude=52.52&longitude=13.41&current=temperature_2m,wind_speed_10m"))
+                .andRespond(withStatus(HttpStatus.BAD_REQUEST));
+
+        // when + then
+        assertThrows(Exception.class, () -> sut.getCurrentForecast(LOCATION));
+        mockServer.verify();
     }
 }

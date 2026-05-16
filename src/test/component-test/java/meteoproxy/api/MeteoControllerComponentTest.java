@@ -55,12 +55,13 @@ class MeteoControllerComponentTest {
         // given
         BigDecimal latitude = new BigDecimal("20.10");
         BigDecimal longitude = new BigDecimal("40.20");
+        Location location = new Location(latitude, longitude);
 
         GetForecastResponse forecastResponse = new GetForecastResponse(
                 "GMT",
                 new CurrentDto("2026-01-23T13:15:00", new BigDecimal("2.3"), new BigDecimal("12.3"))
         );
-        when(openMeteoConnector.getCurrentForecast(eq(latitude), eq(longitude)))
+        when(openMeteoConnector.getCurrentForecast(eq(location)))
                 .thenReturn(forecastResponse);
 
         // when
@@ -87,8 +88,9 @@ class MeteoControllerComponentTest {
         // given
         BigDecimal latitude = new BigDecimal("9.11");
         BigDecimal longitude = new BigDecimal("3.20");
+        Location location = new Location(latitude, longitude);
 
-        when(openMeteoConnector.getCurrentForecast(eq(latitude), eq(longitude)))
+        when(openMeteoConnector.getCurrentForecast(eq(location)))
                 .thenThrow(new ExternalApiException("Call failed"));
 
         // when

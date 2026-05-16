@@ -4,6 +4,7 @@ import com.github.benmanes.caffeine.cache.Cache;
 import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
 import io.github.resilience4j.retry.RetryRegistry;
 import meteoproxy.connector.openmeteo.dto.GetForecastResponse;
+import meteoproxy.domain.meteo.model.Location;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -30,7 +31,7 @@ public class OpenMeteoConfig {
     @Bean
     public OpenMeteoConnector openMeteoConnector(
             RestClient openMeteoClient,
-            Cache<ForecastCacheKey, GetForecastResponse> forecastCache,
+            Cache<Location, GetForecastResponse> forecastCache,
             RetryRegistry retryRegistry,
             CircuitBreakerRegistry circuitBreakerRegistry
     ) {

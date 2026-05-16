@@ -6,9 +6,6 @@ import meteoproxy.domain.meteo.model.Location;
 import meteoproxy.domain.meteo.model.Weather;
 import meteoproxy.domain.utils.DateTimeUtils;
 
-import java.math.BigDecimal;
-import java.math.RoundingMode;
-
 public class MeteoService {
 
     private final OpenMeteoConnector openMeteoConnector;
@@ -17,14 +14,11 @@ public class MeteoService {
         this.openMeteoConnector = openMeteoConnector;
     }
 
-    public Weather getCurrentWeather(BigDecimal latitude, BigDecimal longitude) {
-        BigDecimal roundedLat = latitude.setScale(2, RoundingMode.HALF_UP);
-        BigDecimal roundedLon = longitude.setScale(2, RoundingMode.HALF_UP);
-
-        var response = openMeteoConnector.getCurrentForecast(roundedLat, roundedLon);
+    public Weather getCurrentWeather(Location location) {
+        var response = openMeteoConnector.getCurrentForecast(location);
 
         return new Weather(
-                new Location(roundedLat, roundedLon),
+                location,
                 new CurrentWeather(response.current().temperature(), response.current().windSpeed()),
                 "open-meteo",
                 DateTimeUtils.convertToZuluDateTime(response.current().time(), response.timezone())

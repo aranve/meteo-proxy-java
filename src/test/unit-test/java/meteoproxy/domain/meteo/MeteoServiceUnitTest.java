@@ -26,11 +26,13 @@ class MeteoServiceUnitTest {
                 "UTC",
                 new CurrentDto("2026-01-21T12:00", new BigDecimal("12.3"), new BigDecimal("5.4"))
         );
-        when(openMeteoConnector.getCurrentForecast(new BigDecimal("52.52"), new BigDecimal("13.41")))
+        Location expectedLocation = new Location(new BigDecimal("52.52"), new BigDecimal("13.41"));
+        when(openMeteoConnector.getCurrentForecast(expectedLocation))
                 .thenReturn(response);
 
         BigDecimal lat = new BigDecimal("52.5249");
         BigDecimal lon = new BigDecimal("13.4051");
+        Location location = new Location(lat, lon);
 
         Weather expectedResult = new Weather(
                 new Location(new BigDecimal("52.52"), new BigDecimal("13.41")),  // Rounded coordinates
@@ -40,7 +42,7 @@ class MeteoServiceUnitTest {
         );
 
         // when
-        Weather result = sut.getCurrentWeather(lat, lon);
+        Weather result = sut.getCurrentWeather(location);
 
         // then
         assertEquals(expectedResult, result);

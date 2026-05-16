@@ -9,6 +9,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import meteoproxy.api.dto.WeatherDto;
 import meteoproxy.api.validation.CoordinatesValidator;
 import meteoproxy.domain.meteo.MeteoService;
+import meteoproxy.domain.meteo.model.Location;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.MediaType;
@@ -63,7 +64,7 @@ public class MeteoController {
     ) {
         LOG.info("Getting weather for latitude: {}, longitude: {}", latitude, longitude);
         CoordinatesValidator.validateCoordinates(latitude, longitude);
-        var weather = meteoService.getCurrentWeather(latitude, longitude);
+        var weather = meteoService.getCurrentWeather(new Location(latitude, longitude));
         return WeatherDto.from(weather);
     }
 }

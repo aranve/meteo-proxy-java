@@ -8,7 +8,7 @@ springdoc:
 
 logging:
   level:
-    org.zalando.logbook: TRACE
+    org.zalando.logbook: DEBUG
 
 logbook:
   obfuscate:
@@ -22,7 +22,7 @@ resilience4j:
   retry:
     instances:
       openMeteoApi:
-        max-attempts: 2
+        max-attempts: 3
         wait-duration: 2s
         retry-exceptions:
           - meteoproxy.domain.exception.ExternalApiException
