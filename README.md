@@ -5,21 +5,54 @@ The meteoproxy app contains a single endpoint for fetching current weather by la
 Swagger UI documentation:
 http://localhost:8080/swagger-ui/index.html
 
-App is secured with basic auth for demo purposes only: user/password
+App is secured with basic auth: user/password
 
 ## Local deployment process
 
 ### Docker image
-`docker build -t meteoproxy-java .`
 
-`docker tag meteoproxy-java:latest aranve/meteoproxy-java:latest`
+Build the Docker image with version tag from pom.xml:
+```shell
+VERSION=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)
+docker build -t meteoproxy-java:${VERSION} .
+```
 
-`docker push aranve/meteoproxy-java:latest`
+Tag the image for Docker Hub:
+```shell
+docker tag meteoproxy-java:${VERSION} aranve/meteoproxy-java:${VERSION}
+```
+
+Push to Docker Hub:
+```shell
+docker push aranve/meteoproxy-java:${VERSION}
+```
+
 
 ### K8s deployment
 
-`kubectl apply -f k8s/deployment.yaml`
+Update the image version in `k8s/deployment.yaml` to match the version you want to deploy:
+```yaml
+image: aranve/meteoproxy-java:1.0.0-SNAPSHOT
+```
 
-`kubectl get pods`
+Apply the deployment:
+```shell
+kubectl apply -f k8s/deployment.yaml
+```
 
-`kubectl port-forward pod/<pod-name> 8080:8080`
+Check pods status:
+```shell
+kubectl get pods
+```
+
+Port forward to access the app:
+```shell
+kubectl port-forward pod/<pod-name> 8080:8080
+```
+
+To update to a new version:
+1. Build and push the new Docker image with the new version tag
+2. Update the image version in `k8s/deployment.yaml`
+3. Apply the changes: `kubectl apply -f k8s/deployment.yaml`
+4. Monitor rollout: `kubectl rollout status deployment/meteoproxy-java-deployment`
+

@@ -14,7 +14,8 @@ spec:
     spec:
       containers:
         - name: meteoproxy-java
-          image: aranve/meteoproxy-java:latest
+          image: aranve/meteoproxy-java:1.0.0-SNAPSHOT
+          imagePullPolicy: Always
           ports:
             - containerPort: 8080
           livenessProbe:
