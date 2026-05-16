@@ -11,20 +11,19 @@ App is secured with basic auth: user/password
 
 ### Docker image
 
-Build the Docker image with version tag from pom.xml:
+Build the Docker image:
 ```shell
-VERSION=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)
-docker build -t meteoproxy-java:${VERSION} .
+docker build -t meteoproxy-java:1.0.0-SNAPSHOT .
 ```
 
 Tag the image for Docker Hub:
 ```shell
-docker tag meteoproxy-java:${VERSION} aranve/meteoproxy-java:${VERSION}
+docker tag meteoproxy-java:1.0.0-SNAPSHOT aranve/meteoproxy-java:1.0.0-SNAPSHOT
 ```
 
 Push to Docker Hub:
 ```shell
-docker push aranve/meteoproxy-java:${VERSION}
+docker push aranve/meteoproxy-java:1.0.0-SNAPSHOT
 ```
 
 
