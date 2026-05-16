@@ -13,8 +13,8 @@ public class HttpConfig {
     @Bean
     public ClientHttpRequestFactory clientHttpRequestFactory() {
         SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
-        factory.setConnectTimeout(Duration.ofMillis(2000));
-        factory.setReadTimeout(Duration.ofMillis(2000));
+        factory.setConnectTimeout(Duration.ofMillis(5000));
+        factory.setReadTimeout(Duration.ofMillis(5000));
         return factory;
     }
 }
