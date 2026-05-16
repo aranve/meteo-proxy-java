@@ -7,6 +7,7 @@ import meteoproxy.connector.openmeteo.dto.GetForecastResponse;
 import meteoproxy.domain.exception.ExternalApiException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestClient;
 
 import java.math.BigDecimal;
@@ -39,12 +40,15 @@ public class OpenMeteoConnector {
     }
 
     private GetForecastResponse getCurrentForecastInternal(BigDecimal latitude, BigDecimal longitude) {
-        return Retry.decorateSupplier(retry, CircuitBreaker.decorateSupplier(circuitBreaker, () -> fetchFromApi(latitude, longitude))).get();
+        var supplier = CircuitBreaker.decorateSupplier(circuitBreaker,
+                () -> fetchFromApi(latitude, longitude));
+        var decoratedSupplier = Retry.decorateSupplier(retry, supplier);
+        return decoratedSupplier.get();
     }
 
     private GetForecastResponse fetchFromApi(BigDecimal latitude, BigDecimal longitude) {
         try {
-            GetForecastResponse response = restClient.get()
+            var response = restClient.get()
                     .uri(uriBuilder -> uriBuilder
                             .path("forecast")
                             .queryParam("latitude", latitude)
@@ -53,18 +57,20 @@ public class OpenMeteoConnector {
                             .build())
                     .retrieve()
                     .body(GetForecastResponse.class);
-            
+
             if (response == null) {
                 LOG.error("Received null response from open-meteo API for latitude: {}, longitude: {}", latitude, longitude);
                 throw new ExternalApiException("Received null response from external API");
             }
-            
+
             return response;
-        } catch (ExternalApiException e) {
+        } catch (HttpClientErrorException e) {
+            LOG.error("Client error from open-meteo API: status={}, body={}, latitude={}, longitude={}",
+                    e.getStatusCode(), e.getResponseBodyAsString(), latitude, longitude);
             throw e;
         } catch (Exception e) {
-            LOG.error("Request to open-meteo failed for latitude: {}, longitude: {}", latitude, longitude, e);
-            throw new ExternalApiException("Could not get current forecast for latitude: " + latitude + ", longitude: " + longitude);
+            LOG.error("Error calling open-meteo API for latitude: {}, longitude: {}", latitude, longitude, e);
+            throw new ExternalApiException("Error contacting weather API");
         }
     }
 }
